@@ -77,25 +77,31 @@
             }
         }
 
-        function comecar() {
-            // Sorteio Justo
-            let papeis = ["JUDAS", "JESUS", "ANJO"];
-            while (papeis.length < conexoes.length) papeis.push("POVO");
-            
-            // Embaralhamento Fisher-Yates
-            for (let i = papeis.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [papeis[i], papeis[j]] = [papeis[j], papeis[i]];
+       function comecar() {
+            // 1. Criamos os papéis principais
+            let listaPapeis = ["JUDAS", "JESUS", "ANJO"];
+    
+            // 2. Preenchemos com POVO se houver mais gente
+            while (listaPapeis.length < conexoes.length) {
+            listaPapeis.push("POVO");
+        }
+
+            // 3. O SEGREDO: Embaralhamos a lista 3 vezes seguidas!
+            // Isso quebra qualquer padrão de repetição do navegador.
+            for (let rodada = 0; rodada < 3; rodada++) {
+                for (let i = listaPapeis.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [listaPapeis[i], listaPapeis[j]] = [listaPapeis[j], listaPapeis[i]];
+                }
             }
 
-            // Envia para os celulares
+            // 4. Enviamos para os celulares
             conexoes.forEach((p, i) => {
-                p.conn.send({ comando: 'START', papel: papeis[i] });
+                p.conn.send({ comando: 'START', papel: listaPapeis[i] });
             });
 
             document.getElementById('lobby').style.display = 'none';
             document.getElementById('painel-narrador').style.display = 'block';
-            document.getElementById('instrucao').innerText = "Jerusalém dorme... Peça para todos fecharem os olhos.";
         }
 
         const roteiro = [
@@ -125,3 +131,4 @@
     </script>
 </body>
 </html>
+
