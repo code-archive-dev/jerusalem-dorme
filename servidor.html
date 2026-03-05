@@ -78,32 +78,37 @@
         }
 
        function comecar() {
-            // 1. Criamos os papéis principais
-            let listaPapeis = ["JUDAS", "JESUS", "ANJO"];
-    
-            // 2. Preenchemos com POVO se houver mais gente
-            while (listaPapeis.length < conexoes.length) {
-            listaPapeis.push("POVO");
-        }
+            // 1. Criamos os papéis baseados no número de pessoas
+            let papeis = ["JUDAS", "ANJO", "JESUS"];
+            while (papeis.length < conexoes.length) {
+                papeis.push("POVO");
+            }
+            // Corta para o tamanho exato de jogadores
+            papeis = papeis.slice(0, conexoes.length);
 
-            // 3. O SEGREDO: Embaralhamos a lista 3 vezes seguidas!
-            // Isso quebra qualquer padrão de repetição do navegador.
-            for (let rodada = 0; rodada < 3; rodada++) {
-                for (let i = listaPapeis.length - 1; i > 0; i--) {
+            // 2. CRIAMOS UMA CÓPIA DA LISTA DE JOGADORES PARA EMBARALHAR
+            let jogadoresMisturados = [...conexoes];
+
+            // 3. EMBARALHAMENTO TRIPLO (Fisher-Yates) nos JOGADORES
+            for (let r = 0; r < 3; r++) {
+                for (let i = jogadoresMisturados.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [listaPapeis[i], listaPapeis[j]] = [listaPapeis[j], listaPapeis[i]];
+                    [jogadoresMisturados[i], jogadoresMisturados[j]] = [jogadoresMisturados[j], jogadoresMisturados[i]];
                 }
             }
 
-            // 4. Enviamos para os celulares
-            conexoes.forEach((p, i) => {
-                p.conn.send({ comando: 'START', papel: listaPapeis[i] });
+            // 4. AGORA ENTREGAMOS OS PAPÉIS NA ORDEM MISTURADA
+            jogadoresMisturados.forEach((jogador, i) => {
+                console.log("Sorteado: " + jogador.nome + " será " + papeis[i]);
+                jogador.conn.send({ 
+                    comando: 'START', 
+                    papel: papeis[i] 
+                });
             });
 
             document.getElementById('lobby').style.display = 'none';
             document.getElementById('painel-narrador').style.display = 'block';
         }
-
         const roteiro = [
             "JUDAS: Acordem e escolham sua vítima em silêncio!",
             "ANJO: Acorde e escolha alguém para proteger.",
@@ -131,4 +136,5 @@
     </script>
 </body>
 </html>
+
 
