@@ -73,33 +73,41 @@
             });
         }
 
-       function comecar() {
-            // 1. Criamos os papéis básicos
+       // Função que embaralha e inicia (Sorteio Justo)
+        function comecar() {
             let listaPapeis = ["JUDAS", "JESUS", "ANJO"];
-    
-            // 2. Preenchemos com POVO até dar o número de pessoas conectadas
             while (listaPapeis.length < conexoes.length) {
                 listaPapeis.push("POVO");
             }
 
-            // 3. EMBARALHAMENTO REAL (Fisher-Yates)
-            // Isso garante que a ordem mude de verdade!
+            // Embaralha para ninguém saber quem é quem (Fisher-Yates)
             for (let i = listaPapeis.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [listaPapeis[i], listaPapeis[j]] = [listaPapeis[j], listaPapeis[i]];
             }
 
-            // 4. Enviamos para os celulares conectados
             conexoes.forEach((p, i) => {
                 p.conn.send({ comando: 'START', papel: listaPapeis[i] });
             });
 
-            // Muda a tela para o Narrador
             document.getElementById('lobby').style.display = 'none';
             document.getElementById('painel-narrador').style.display = 'block';
+        }
+
+
+        function resetarPartida() {
+            conexoes.forEach(p => {
+                p.conn.send({ comando: 'VOLTAR_ESPERA' });
+            });
+
+            passoAtual = 0; // Reinicia o roteiro do narrador
+            document.getElementById('painel-narrador').style.display = 'none';
+            document.getElementById('lobby').style.display = 'block';
+            document.getElementById('btn-start').innerText = "INICIAR NOVA RODADA";
         }
     </script>
 </body>
 </html>
+
 
 
