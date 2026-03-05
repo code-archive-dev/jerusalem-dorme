@@ -73,13 +73,28 @@
             });
         }
 
-        function comecar() {
-            const papeis = ["JUDAS", "JESUS", "ANJO", "POVO"];
+       function comecar() {
+            // 1. Criamos a lista de papéis baseada no número de pessoas
+            let listaPapeis = ["JUDAS", "JESUS", "ANJO"];
+        
+            // 2. Se tiver mais gente, preenchemos com "POVO"
+            while (listaPapeis.length < conexoes.length) {
+                listaPapeis.push("POVO");
+            }
+
+            // 3. O PULO DO GATO: Embaralhar a lista aleatoriamente
+            listaPapeis = listaPapeis.sort(() => Math.random() - 0.5);
+
+            // 4. Agora sim, enviamos para os celulares
             conexoes.forEach((p, i) => {
-                p.conn.send({ comando: 'START', papel: papeis[i] || "POVO" });
+                p.conn.send({ comando: 'START', papel: listaPapeis[i] });
             });
-            alert("Enviado para os celulares!");
+
+            // Mostra o roteiro do narrador
+            document.getElementById('lobby').style.display = 'none';
+            document.getElementById('painel-narrador').style.display = 'block';
         }
     </script>
 </body>
 </html>
+
