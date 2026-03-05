@@ -5,47 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --ouro: #d4af37; --noite: #0a0a0c; --papiro: #e3d5b8; }
-        body { background: var(--noite); color: white; text-align: center; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        
-        /* LOGIN */
-        .box { padding: 20px; width: 85%; }
-        input { padding: 15px; width: 100%; border-radius: 10px; border: 2px solid var(--ouro); background: #1a1a1a; color: white; font-size: 1.2rem; margin-bottom: 20px; box-sizing: border-box; }
-        
-        /* A ABINHA PROFISSIONAL */
-        .card { width: 300px; height: 450px; background: var(--papiro); border-radius: 20px; border: 6px solid var(--ouro); position: relative; overflow: hidden; display: none; box-shadow: 0 0 30px rgba(0,0,0,1); }
-        .cover { position: absolute; top:0; left:0; width:100%; height:100%; background: linear-gradient(135deg, #4b2504, #8b4513); z-index:2; transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1); display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--ouro); }
+        body { background: #0a0a0c; color: white; text-align: center; font-family: sans-serif; padding-top: 50px; }
+        .card { width: 280px; height: 400px; background: #e3d5b8; margin: 0 auto; border-radius: 15px; position: relative; overflow: hidden; border: 4px solid #d4af37; display:none; }
+        .cover { position: absolute; top:0; left:0; width:100%; height:100%; background: #5d2e0a; z-index:2; transition: 0.5s; display:flex; align-items:center; justify-content:center; color:#d4af37; font-weight:bold; }
         .card:active .cover { transform: translateY(-95%); }
-        .secret { position: absolute; width:100%; height:100%; color:#1a1a1a; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px; box-sizing:border-box; }
-        
-        .loader { border: 4px solid #333; border-top: 4px solid var(--ouro); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .secret { position: absolute; width:100%; height:100%; color:#222; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; }
     </style>
 </head>
 <body>
-
-    <div id="login" class="box">
-        <h2 style="color: var(--ouro);">Sua Identidade</h2>
-        <input type="text" id="nomeUser" placeholder="Digite seu nome...">
-        <button onclick="conectarServidor()" style="width:100%; padding:15px; background:var(--ouro); border:none; font-weight:bold; border-radius:10px; font-size:1.1rem;">ENTRAR NA SALA</button>
+    <div id="login">
+        <h2>ENTRAR NA SALA</h2>
+        <input type="text" id="nome" placeholder="Seu Nome" style="padding:15px; border-radius:10px;"><br><br>
+        <button onclick="conectar()" style="padding:15px 30px; background:#d4af37; border:none; font-weight:bold; border-radius:10px;">CONECTAR</button>
     </div>
 
-    <div id="espera" class="box" style="display:none;">
-        <h2 style="color: var(--ouro);">Conectado!</h2>
-        <div class="loader"></div>
-        <p>Aguarde o Narrador no Computador iniciar a partida...</p>
+    <div id="espera" style="display:none;">
+        <h3>Você está na fila!</h3>
+        <p>Aguarde o Mestre começar...</p>
     </div>
 
     <div id="jogo" class="card">
-        <div class="cover">
-            <span style="font-size: 4rem;">??</span>
-            <h2 style="margin: 10px 0;">REVELAR PAPEL</h2>
-            <small>Segure e arraste para cima</small>
-        </div>
+        <div class="cover">SEGURE PARA REVELAR</div>
         <div class="secret">
-            <p style="margin:0; font-size: 0.9rem;">SEU PAPEL �:</p>
-            <h1 id="papel" style="font-size: 3rem; margin: 10px 0;">JUDAS</h1>
-            <p id="missao" style="font-style: italic;"></p>
+            <p>VOCÊ É:</p>
+            <h1 id="papel"></h1>
         </div>
     </div>
 
@@ -53,13 +36,11 @@
         const urlParams = new URLSearchParams(window.location.search);
         const salaID = urlParams.get('sala');
         const peer = new Peer();
-        let conn;
 
-        function conectarServidor() {
-            const nome = document.getElementById('nomeUser').value;
-            if(!nome) return alert("Digite seu nome!");
+        function conectar() {
+            const nome = document.getElementById('nome').value;
+            const conn = peer.connect(salaID);
 
-            conn = peer.connect(salaID);
             conn.on('open', () => {
                 conn.send({ tipo: 'ENTRAR', nome: nome });
                 document.getElementById('login').style.display = 'none';
@@ -67,12 +48,10 @@
             });
 
             conn.on('data', (data) => {
-                if (data.comando === 'START_GAME') {
+                if (data.comando === 'START') {
                     document.getElementById('espera').style.display = 'none';
                     document.getElementById('jogo').style.display = 'block';
-                    const p = document.getElementById('papel');
-                    p.innerText = data.papel;
-                    p.style.color = data.papel === "JUDAS" ? "red" : (data.papel === "JESUS" ? "goldenrod" : "blue");
+                    document.getElementById('papel').innerText = data.papel;
                 }
             });
         }
