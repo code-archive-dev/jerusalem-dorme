@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>SERVIDOR - Jerusalém Dorme</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root { --ouro: #d4af37; --noite: #0a0a0c; --sangue: #8b0000; }
+        body { background: var(--noite); color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; padding: 20px; }
+        .painel { border: 3px solid var(--ouro); display: inline-block; padding: 40px; border-radius: 30px; background: #111; box-shadow: 0 0 50px rgba(212, 175, 55, 0.2); }
+        #qrcode { background: white; padding: 15px; display: inline-block; border-radius: 15px; margin: 20px; transition: transform 0.3s; }
+        .contador { font-size: 3.5rem; color: var(--ouro); font-weight: bold; margin: 10px 0; }
+        input { padding: 10px; font-size: 1.5rem; width: 80px; text-align: center; border-radius: 10px; border: 2px solid var(--ouro); background: #222; color: white; }
+        .lista-online { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 700px; margin: 20px auto; min-height: 50px; }
+        .tag-player { background: var(--ouro); color: black; padding: 8px 20px; border-radius: 20px; font-weight: bold; animation: pop 0.3s ease; }
+        @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+        button { background: var(--ouro); padding: 20px 50px; border: none; font-weight: bold; cursor: pointer; border-radius: 15px; font-size: 1.8rem; margin-top: 30px; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        button:disabled { background: #444; color: #888; cursor: not-allowed; box-shadow: none; }
+    </style>
+</head>
+<body>
+
+    <div class="painel">
+        <h1 style="letter-spacing: 5px; color: var(--ouro);">JERUSALEM DORME</h1>
+        
+        <div id="setup">
+            <p style="font-size: 1.2rem;">Defina o limite de fieis para esta partida:</p>
+            <input type="number" id="vagas" value="10" min="5">
+            <br><br>
+            <button onclick="criarSala()">ABRIR SALA</button>
+        </div>
+
+        <div id="lobby" style="display:none;">
+            <p style="font-size: 1.3rem;">Escaneiem para entrar no destino:</p>
+            <div id="qrcode"></div>
+            <div class="contador"><span id="total">0</span> / <span id="max">10</span></div>
+            <div class="lista-online" id="lista"></div>
+            <button id="btn-play" onclick="iniciarTudo()" disabled>AGUARDANDO FIÉIS...</button>
+        </div>
+    </div>
+
+    <script>
+        let peer;
+        let conexoes = [];
+        let limiteJogadores = 10;
+
+        function criarSala() {
+            limiteJogadores = parseInt(document.getElementById('vagas').value);
+            document.getElementById('max').innerText = limiteJogadores;
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('lobby').style.display = 'block';
+
+            // ID da Sala Único
+            const salaID = "JERUSALEM-" + Math.floor(Math.random() * 9999);
+            peer = new Peer(salaID);
+
+            peer.on('open', (id) => {
+                // !!! IMPORTANTE: Troque o link abaixo pelo seu link do GitHub Pages !!!
+                const linkJogador = "https://github.com/code-archive-dev/jerusalem-dorme/blob/main/jogador.html?sala=" + id;
+                
+                document.getElementById("qrcode").innerHTML = "";
+                new QRCode(document.getElementById("qrcode"), {
+                    text: linkJogador,
+                    width: 250, height: 250
+                });
+            });
+
+            peer.on('connection', (conn) => {
+                conn.on('open', () => {
+                    conn.on('data', (data) => {
+                        if (data.tipo === 'ENTRAR' && conexoes.length < limiteJogadores) {
+                            conexoes.push({ conn, nome: data.nome });
+                            atualizarInterface();
+                        }
+                    });
+                });
+            });
+        }
+
+        function atualizarInterface() {
+            document.getElementById('total').innerText = conexoes.length;
+            const lista = document.getElementById('lista');
+            lista.innerHTML = conexoes.map(p => `<div class="tag-player">${p.nome}</div>`).join("");
+
+            if (conexoes.length >= limiteJogadores) {
+                const btn = document.getElementById('btn-play');
+                btn.disabled = false;
+                btn.innerText = "INICIAR JOGO AGORA!";
+                btn.style.animation = "pulse 1s infinite alternate";
+            }
+        }
+
+        function iniciarTudo() {
+            const papeis = ["JUDAS", "JESUS", "ANJO"];
+            while(papeis.length < conexoes.length) papeis.push("POVO");
+            papeis.sort(() => Math.random() - 0.5);
+
+            conexoes.forEach((p, i) => {
+                p.conn.send({ comando: 'START_GAME', papel: papeis[i] });
+            });
+            alert("Sinal enviado! Todos os celulares foram atualizados.");
+        }
+    </script>
+</body>
+</html>
