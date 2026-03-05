@@ -2,18 +2,15 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>SERVIDOR - Jerusalém Dorme</title>
+    <title>SERVIDOR JERUSALÉM</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { background: #0a0a0c; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
         .painel { border: 3px solid #d4af37; display: inline-block; padding: 30px; border-radius: 20px; background: #111; }
         #qrcode { background: white; padding: 15px; display: inline-block; border-radius: 10px; margin: 20px; }
-        .contador { font-size: 3rem; color: #d4af37; }
-        .lista { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 20px; }
-        .player { background: #d4af37; color: black; padding: 5px 15px; border-radius: 15px; font-weight: bold; }
+        .contador { font-size: 3rem; color: #d4af37; font-weight: bold; }
         button { background: #d4af37; padding: 20px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1.2rem; }
-        button:disabled { background: #444; color: #888; }
     </style>
 </head>
 <body>
@@ -21,14 +18,14 @@
         <h1>SERVIDOR JERUSALÉM</h1>
         <div id="setup">
             <p>Quantidade de Jogadores:</p>
-            <input type="number" id="vagas" value="5" style="padding:10px; width:50px;">
+            <input type="number" id="vagas" value="2" style="padding:10px; width:50px;">
             <button onclick="configurar()">GERAR QR CODE</button>
         </div>
 
         <div id="lobby" style="display:none;">
             <div id="qrcode"></div>
-            <div class="contador"><span id="total">0</span> / <span id="max">5</span></div>
-            <div class="lista" id="lista"></div>
+            <div class="contador"><span id="total">0</span> / <span id="max">2</span></div>
+            <p id="status-link" style="font-size: 0.8rem; color: #888;"></p>
             <button id="btn-start" onclick="comecar()" disabled>AGUARDANDO...</button>
         </div>
     </div>
@@ -36,23 +33,26 @@
     <script>
         let peer;
         let conexoes = [];
-        let limite = 5;
+        let limite = 2;
 
         function configurar() {
             limite = document.getElementById('vagas').value;
             document.getElementById('max').innerText = limite;
             
-            // Gera um ID fixo para teste ou aleatório
+            // Criando ID da sala
             const salaID = "SALA-" + Math.floor(1000 + Math.random() * 9000);
             peer = new Peer(salaID);
 
             peer.on('open', (id) => {
-                // !!! AQUI ESTÁ O SEGREDO !!! 
-                // Coloque o seu link do GitHub aqui embaixo:
-                const meuLinkGitHub = "https://code-archive-dev.github.io/jerusalem-dorme/jogador.html";
-                const linkFinal = meuLinkGitHub + "?sala=" + id;
+                // LINK CORRIGIDO BASEADO NAS SUAS FOTOS
+                const linkBase = "https://code-archive-dev.github.io/jerusalem-dorme/jogador.html";
+                const linkFinal = linkBase + "?sala=" + id;
                 
+                // Limpa e gera o QR Code
+                document.getElementById("qrcode").innerHTML = "";
                 new QRCode(document.getElementById("qrcode"), linkFinal);
+                document.getElementById('status-link').innerText = "Link: " + linkFinal;
+
                 document.getElementById('setup').style.display = 'none';
                 document.getElementById('lobby').style.display = 'block';
             });
@@ -62,30 +62,24 @@
                     conn.on('data', (data) => {
                         if (data.tipo === 'ENTRAR') {
                             conexoes.push({ conn, nome: data.nome });
-                            atualizar();
+                            document.getElementById('total').innerText = conexoes.length;
+                            if(conexoes.length >= limite) {
+                                document.getElementById('btn-start').disabled = false;
+                                document.getElementById('btn-start').innerText = "INICIAR JOGO!";
+                            }
                         }
                     });
                 });
             });
         }
 
-        function atualizar() {
-            document.getElementById('total').innerText = conexoes.length;
-            document.getElementById('lista').innerHTML = conexoes.map(p => `<div class="player">${p.nome}</div>`).join("");
-            if(conexoes.length >= limite) {
-                document.getElementById('btn-start').disabled = false;
-                document.getElementById('btn-start').innerText = "INICIAR JOGO!";
-            }
-        }
-
         function comecar() {
-            const papeis = ["JUDAS", "JESUS", "ANJO", "POVO", "POVO", "POVO", "POVO"];
+            const papeis = ["JUDAS", "JESUS", "ANJO", "POVO"];
             conexoes.forEach((p, i) => {
                 p.conn.send({ comando: 'START', papel: papeis[i] || "POVO" });
             });
+            alert("Enviado para os celulares!");
         }
     </script>
 </body>
 </html>
-
-
