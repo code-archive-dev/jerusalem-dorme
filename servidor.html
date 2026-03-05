@@ -2,112 +2,126 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>SERVIDOR JERUSALÉM</title>
+    <title>MESTRE - JERUSALÉM</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { background: #0a0a0c; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        .painel { border: 3px solid #d4af37; display: inline-block; padding: 30px; border-radius: 20px; background: #111; }
-        #qrcode { background: white; padding: 15px; display: inline-block; border-radius: 10px; margin: 20px; }
-        .contador { font-size: 3rem; color: #d4af37; font-weight: bold; }
-        button { background: #d4af37; padding: 20px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1.2rem; }
+        body { background: #0a0a0c; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; }
+        .painel { border: 3px solid #d4af37; display: inline-block; padding: 40px; border-radius: 20px; background: #111; box-shadow: 0 0 30px rgba(212,175,55,0.2); min-width: 400px; }
+        #qrcode { background: white; padding: 20px; display: inline-block; border-radius: 10px; margin: 20px; }
+        .contador { font-size: 2.5rem; color: #d4af37; font-weight: bold; margin: 20px 0; }
+        button { background: #d4af37; color: black; padding: 15px 30px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1.1rem; transition: 0.3s; }
+        button:hover { background: #fff; transform: scale(1.05); }
+        button:disabled { background: #444; color: #888; cursor: not-allowed; }
+        .btn-reset { background: #8b0000; color: white; margin-top: 20px; font-size: 0.9rem; padding: 10px 20px; }
+        #lista-nomes { color: #888; font-size: 0.9rem; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <div class="painel">
-        <h1>SERVIDOR JERUSALÉM</h1>
-        <div id="setup">
-            <p>Quantidade de Jogadores:</p>
-            <input type="number" id="vagas" value="2" style="padding:10px; width:50px;">
-            <button onclick="configurar()">GERAR QR CODE</button>
+        <h1 style="letter-spacing: 5px; color: #d4af37;">JERUSALÉM DORME</h1>
+        
+        <div id="lobby">
+            <div id="qrcode"></div>
+            <p>Escaneie para entrar na sala</p>
+            <div id="lista-nomes">Aguardando jogadores...</div>
+            <div class="contador"><span id="total">0</span> JOGADORES</div>
+            <button id="btn-start" onclick="comecar()" disabled>AGUARDANDO JOGADORES...</button>
         </div>
 
-        <div id="lobby" style="display:none;">
-            <div id="qrcode"></div>
-            <div class="contador"><span id="total">0</span> / <span id="max">2</span></div>
-            <p id="status-link" style="font-size: 0.8rem; color: #888;"></p>
-            <button id="btn-start" onclick="comecar()" disabled>AGUARDANDO...</button>
+        <div id="painel-narrador" style="display:none;">
+            <div id="instrucao" style="font-size: 1.8rem; min-height: 100px; padding: 20px; border: 1px dashed #d4af37; margin: 20px 0;">
+                "Prepare-se para começar..."
+            </div>
+            <button onclick="proximoPasso()">PRÓXIMO PASSO ➔</button>
+            <br>
+            <button class="btn-reset" onclick="resetarPartida()">⚠️ FINALIZAR E RESETAR RODADA</button>
         </div>
     </div>
 
     <script>
         let peer;
         let conexoes = [];
-        let limite = 2;
+        let passoAtual = 0;
+        const salaID = "JERUSALEM-" + Math.floor(1000 + Math.random() * 9000);
 
-        function configurar() {
-            limite = document.getElementById('vagas').value;
-            document.getElementById('max').innerText = limite;
-            
-            // Criando ID da sala
-            const salaID = "SALA-" + Math.floor(1000 + Math.random() * 9000);
-            peer = new Peer(salaID);
+        // Inicia o servidor PeerJS
+        peer = new Peer(salaID);
 
-            peer.on('open', (id) => {
-                // LINK CORRIGIDO BASEADO NAS SUAS FOTOS
-                const linkBase = "https://code-archive-dev.github.io/jerusalem-dorme/jogador.html";
-                const linkFinal = linkBase + "?sala=" + id;
-                
-                // Limpa e gera o QR Code
-                document.getElementById("qrcode").innerHTML = "";
-                new QRCode(document.getElementById("qrcode"), linkFinal);
-                document.getElementById('status-link').innerText = "Link: " + linkFinal;
+        peer.on('open', (id) => {
+            const urlBase = "https://code-archive-dev.github.io/jerusalem-dorme/jogador.html";
+            const linkFinal = urlBase + "?sala=" + id;
+            document.getElementById("qrcode").innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), linkFinal);
+            console.log("Sala aberta: " + id);
+        });
 
-                document.getElementById('setup').style.display = 'none';
-                document.getElementById('lobby').style.display = 'block';
+        peer.on('connection', (conn) => {
+            conn.on('data', (data) => {
+                if (data.tipo === 'ENTRAR') {
+                    // Adiciona se o nome não existir na lista
+                    if(!conexoes.find(c => c.nome === data.nome)){
+                        conexoes.push({ conn, nome: data.nome });
+                        atualizarLobby();
+                    }
+                }
             });
+        });
 
-            peer.on('connection', (conn) => {
-                conn.on('open', () => {
-                    conn.on('data', (data) => {
-                        if (data.tipo === 'ENTRAR') {
-                            conexoes.push({ conn, nome: data.nome });
-                            document.getElementById('total').innerText = conexoes.length;
-                            if(conexoes.length >= limite) {
-                                document.getElementById('btn-start').disabled = false;
-                                document.getElementById('btn-start').innerText = "INICIAR JOGO!";
-                            }
-                        }
-                    });
-                });
-            });
+        function atualizarLobby() {
+            document.getElementById('total').innerText = conexoes.length;
+            document.getElementById('lista-nomes').innerText = "Na sala: " + conexoes.map(c => c.nome).join(", ");
+            if(conexoes.length >= 1) {
+                document.getElementById('btn-start').disabled = false;
+                document.getElementById('btn-start').innerText = "INICIAR JOGO";
+            }
         }
 
-       // Função que embaralha e inicia (Sorteio Justo)
         function comecar() {
-            let listaPapeis = ["JUDAS", "JESUS", "ANJO"];
-            while (listaPapeis.length < conexoes.length) {
-                listaPapeis.push("POVO");
-            }
-
-            // Embaralha para ninguém saber quem é quem (Fisher-Yates)
-            for (let i = listaPapeis.length - 1; i > 0; i--) {
+            // Sorteio Justo
+            let papeis = ["JUDAS", "JESUS", "ANJO"];
+            while (papeis.length < conexoes.length) papeis.push("POVO");
+            
+            // Embaralhamento Fisher-Yates
+            for (let i = papeis.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
-                [listaPapeis[i], listaPapeis[j]] = [listaPapeis[j], listaPapeis[i]];
+                [papeis[i], papeis[j]] = [papeis[j], papeis[i]];
             }
 
+            // Envia para os celulares
             conexoes.forEach((p, i) => {
-                p.conn.send({ comando: 'START', papel: listaPapeis[i] });
+                p.conn.send({ comando: 'START', papel: papeis[i] });
             });
 
             document.getElementById('lobby').style.display = 'none';
             document.getElementById('painel-narrador').style.display = 'block';
+            document.getElementById('instrucao').innerText = "Jerusalém dorme... Peça para todos fecharem os olhos.";
         }
 
+        const roteiro = [
+            "JUDAS: Acordem e escolham sua vítima em silêncio!",
+            "ANJO: Acorde e escolha alguém para proteger.",
+            "JESUS: Acorde! O Mestre aponta quem são os Judas.",
+            "AMANHECEU: Todos abram os olhos. Alguém foi visitado...",
+            "DEBATE: Decidam quem deve ser levado ao julgamento!"
+        ];
+
+        function proximoPasso() {
+            if(passoAtual < roteiro.length) {
+                document.getElementById('instrucao').innerText = roteiro[passoAtual];
+                passoAtual++;
+            } else {
+                document.getElementById('instrucao').innerText = "Discussão liberada! Use o botão abaixo para nova rodada.";
+            }
+        }
 
         function resetarPartida() {
-            conexoes.forEach(p => {
-                p.conn.send({ comando: 'VOLTAR_ESPERA' });
-            });
-
-            passoAtual = 0; // Reinicia o roteiro do narrador
+            if(!confirm("Resetar agora? Todos os celulares voltarão para a tela de espera.")) return;
+            conexoes.forEach(p => p.conn.send({ comando: 'VOLTAR_ESPERA' }));
+            passoAtual = 0;
             document.getElementById('painel-narrador').style.display = 'none';
             document.getElementById('lobby').style.display = 'block';
-            document.getElementById('btn-start').innerText = "INICIAR NOVA RODADA";
         }
     </script>
 </body>
 </html>
-
-
-
