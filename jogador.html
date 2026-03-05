@@ -77,10 +77,21 @@
                 }
             });
 
-            conexao.on('error', (err) => {
-                alert("Erro de conexão: " + err);
+          conexao.on('data', (data) => {
+                // Se o mestre der START, mostra o papel sorteado
+                if (data.comando === 'START') {
+                    document.getElementById('tela-espera').style.display = 'none';
+                    document.getElementById('tela-jogo').style.display = 'block';
+                    document.getElementById('meu-papel').innerText = data.papel;
+                }
+
+                // Se o mestre der RESET, volta para a tela de aguarde
+                if (data.comando === 'VOLTAR_ESPERA') {
+                    document.getElementById('tela-jogo').style.display = 'none';
+                    document.getElementById('tela-espera').style.display = 'block';
+                }
             });
-        }
     </script>
 </body>
 </html>
+
