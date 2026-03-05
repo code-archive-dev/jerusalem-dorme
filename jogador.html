@@ -5,54 +5,80 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #0a0a0c; color: white; text-align: center; font-family: sans-serif; padding-top: 50px; }
-        .card { width: 280px; height: 400px; background: #e3d5b8; margin: 0 auto; border-radius: 15px; position: relative; overflow: hidden; border: 4px solid #d4af37; display:none; }
-        .cover { position: absolute; top:0; left:0; width:100%; height:100%; background: #5d2e0a; z-index:2; transition: 0.5s; display:flex; align-items:center; justify-content:center; color:#d4af37; font-weight:bold; }
-        .card:active .cover { transform: translateY(-95%); }
-        .secret { position: absolute; width:100%; height:100%; color:#222; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; }
+        body { background: #0a0a0c; color: white; text-align: center; font-family: sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        .caixa { background: #111; padding: 20px; border-radius: 15px; border: 2px solid #d4af37; width: 90%; max-width: 350px; }
+        input { width: 80%; padding: 15px; margin: 10px 0; border-radius: 10px; border: none; font-size: 1rem; }
+        button { background: #d4af37; color: black; border: none; padding: 15px 30px; border-radius: 10px; font-weight: bold; font-size: 1.1rem; cursor: pointer; width: 100%; }
+        /* A CARTA DO JOGO */
+        .card { width: 280px; height: 400px; background: #e3d5b8; border-radius: 15px; position: relative; overflow: hidden; border: 4px solid #d4af37; display:none; box-shadow: 0 0 20px rgba(212,175,55,0.5); }
+        .cover { position: absolute; top:0; left:0; width:100%; height:100%; background: #5d2e0a; z-index:2; transition: 0.6s; display:flex; align-items:center; justify-content:center; color:#d4af37; font-weight:bold; font-size: 1.2rem; }
+        .card:active .cover { transform: translateY(-100%); }
+        .secret { position: absolute; width:100%; height:100%; color:#222; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     </style>
 </head>
 <body>
-    <div id="login">
-        <h2>ENTRAR NA SALA</h2>
-        <input type="text" id="nome" placeholder="Seu Nome" style="padding:15px; border-radius:10px;"><br><br>
-        <button onclick="conectar()" style="padding:15px 30px; background:#d4af37; border:none; font-weight:bold; border-radius:10px;">CONECTAR</button>
+
+    <div id="tela-login" class="caixa">
+        <h2 style="color:#d4af37">JERUSALÉM</h2>
+        <input type="text" id="nome-jogador" placeholder="Seu Nome">
+        <button onclick="conectar()">ENTRAR NA SALA</button>
+        <p id="msg" style="font-size: 0.8rem; color: #888; margin-top: 10px;">Aguardando leitura do QR Code...</p>
     </div>
 
-    <div id="espera" style="display:none;">
-        <h3>Você está na fila!</h3>
-        <p>Aguarde o Mestre começar...</p>
+    <div id="tela-espera" class="caixa" style="display:none;">
+        <h2 style="color:#d4af37">Conectado!</h2>
+        <p>Aguarde o Mestre iniciar a partida no computador...</p>
     </div>
 
-    <div id="jogo" class="card">
+    <div id="tela-jogo" class="card">
         <div class="cover">SEGURE PARA REVELAR</div>
         <div class="secret">
-            <p>VOCÊ É:</p>
-            <h1 id="papel"></h1>
+            <p style="margin:0">VOCÊ É:</p>
+            <h1 id="meu-papel" style="font-size: 3rem; margin: 10px 0;"></h1>
         </div>
     </div>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const salaID = urlParams.get('sala');
+        // Pega o ID da sala que vem no QR Code (?sala=SALA-XXXX)
+        const params = new URLSearchParams(window.location.search);
+        const salaID = params.get('sala');
         const peer = new Peer();
+        let conexao;
+
+        if(!salaID) {
+            document.getElementById('msg').innerText = "Erro: QR Code inválido ou sem ID da sala.";
+            document.getElementById('msg').style.color = "red";
+        }
 
         function conectar() {
-            const nome = document.getElementById('nome').value;
-            const conn = peer.connect(salaID);
+            const nome = document.getElementById('nome-jogador').value;
+            if(!nome) return alert("Por favor, digite seu nome!");
+            if(!salaID) return alert("ID da sala não encontrado!");
 
-            conn.on('open', () => {
-                conn.send({ tipo: 'ENTRAR', nome: nome });
-                document.getElementById('login').style.display = 'none';
-                document.getElementById('espera').style.display = 'block';
+            document.getElementById('msg').innerText = "Tentando conectar ao PC...";
+
+            // Tenta falar com o computador
+            conexao = peer.connect(salaID);
+
+            conexao.on('open', () => {
+                // Envia o nome para o PC (Aqui o 0 vira 1!)
+                conexao.send({ tipo: 'ENTRAR', nome: nome });
+                
+                document.getElementById('tela-login').style.display = 'none';
+                document.getElementById('tela-espera').style.display = 'block';
             });
 
-            conn.on('data', (data) => {
+            // Fica esperando o papel (JUDAS, JESUS, etc)
+            conexao.on('data', (data) => {
                 if (data.comando === 'START') {
-                    document.getElementById('espera').style.display = 'none';
-                    document.getElementById('jogo').style.display = 'block';
-                    document.getElementById('papel').innerText = data.papel;
+                    document.getElementById('tela-espera').style.display = 'none';
+                    document.getElementById('tela-jogo').style.display = 'block';
+                    document.getElementById('meu-papel').innerText = data.papel;
                 }
+            });
+
+            conexao.on('error', (err) => {
+                alert("Erro de conexão: " + err);
             });
         }
     </script>
